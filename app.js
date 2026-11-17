@@ -147,7 +147,7 @@ async function loadLocalQueue(){
  const localKey=await getLocalQueueKey();const raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:un64(cache.nonce),additionalData:enc.encode('DT-local-'+profile.operario)},localKey,un64(cache.data));pending=JSON.parse(dec.decode(raw));
 }
 async function installDesktopUI(){
- const {DesktopUI}=await import('./desktop-ui.js');
+ const {DesktopUI}=await import('./desktop-ui.js?v=pc-selectores-3');
  desktopUI=new DesktopUI({state:()=>snapshot,profile:()=>profile,pending:()=>pending,cloud:()=>!!pairing,today,error:showError,sync:synchronize,command:enqueueCommand,discard,edit:openEditor,remove:removePart,calendar:renderCalendar,balances:renderBalances});
  setInterval(()=>{if(profile&&!busy&&(snapshot?.sincronizacion_diarios?.pendientes>0||pending.some(p=>!['aplicado','rechazado','conflicto'].includes(p.state)||(p.state==='aplicado'&&p.kind==='Comando'&&!p.resultado?.base64&&!p.resultado?.HuellaInicial&&!p.resultado?.Dias&&!p.resultado?.calendario&&(snapshot?.completo?.fecha||0)<(p.appliedAt||0)))))synchronize();},5000);
 }

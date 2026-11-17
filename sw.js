@@ -1,7 +1,7 @@
 // DT conserva solo sus recursos. CALWEB comparte origen, nunca sus cachés.
-const CACHE = 'dt-independiente-2';
+const CACHE = 'dt-independiente-3';
 const BASE = new URL('./', self.location.href);
-const FILES = ['./','index.html','app.js','style.css','desktop-ui.js','selectors.js','desktop.css','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-independiente-2','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
+const FILES = ['./','index.html','app.js','style.css','desktop-ui.js','selectors.js','desktop.css','app.js?v=pc-selectores-3','desktop-ui.js?v=pc-selectores-3','selectors.js?v=pc-selectores-3','desktop.css?v=pc-selectores-3','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-independiente-3','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
 const PATHS = new Set(FILES.map(file => new URL(file, BASE).pathname));
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
