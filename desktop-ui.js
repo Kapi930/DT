@@ -1,4 +1,5 @@
 // Interfaz de DT: mismos grupos de trabajo que el escritorio, con controles táctiles.
+import {CatalogPicker,mergePoints,pointCatalog} from './selectors.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
 const $=id=>document.getElementById(id);
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -9,7 +10,7 @@ const autoFields=new Set(['Id','Version','Revision','RevisionDatos','Creado','Mo
 
 export class DesktopUI{
  constructor(ctx){
-  this.ctx=ctx;this.view='calendario';this.selected=null;this.worker=0;this.filter='';this.day='';this.modelDialog=el('dialog',undefined,'pc-editor');document.body.append(this.modelDialog);
+  this.ctx=ctx;this.view='calendario';this.selected=null;this.worker=0;this.filter='';this.day='';this.modelDialog=el('dialog',undefined,'pc-editor');document.body.append(this.modelDialog);this.pickers=new CatalogPicker(()=>this.state);this.pickers.daily($('part-form'));
   $('workspace').classList.add('pc-workspace');document.querySelector('header h1').textContent='Control partes diarios';
   const menu=el('div',undefined,'pc-menubar');menu.setAttribute('aria-label','Menú principal de DT');
   const groups={Archivo:[['Calendario','calendario'],['Mis partes diarios','partes'],['Cerrar sesión','salir']],Estadísticas:[['Mes','estadistica:mes'],['Mes · Tipo de hora','estadistica:tipo'],['Lista de partes diarios','partes']],Herramientas:[['Calendario laboral y vacaciones','laboral:calendarios'],['Partes de operarios','operarios'],['Usuarios','usuarios'],['Hojas de necesidades','necesidades'],['Cambios de obra','cambios'],['Existencias por obra','existencias'],['Sincronizar con Dropbox','sincronizacion'],['Historial de cambios','historial'],['Diagnóstico','diagnostico'],['Opciones','opciones']],Gestión:[['N.º de obras','catalogo:obras'],['Capítulos de obra','catalogo:capitulos'],['Centros de coste','catalogo:centros'],['Tipos de hora','catalogo:tipos'],['Clientes','catalogo:clientes'],['Jefes de obra','catalogo:jefes'],['Departamentos','catalogo:departamentos'],['Partes de obra','obras'],['Catálogos de obra','obra-catalogo:Obras']]};
@@ -28,7 +29,7 @@ export class DesktopUI{
   for(const [name,kind] of [['Parte enviado','enviado'],['Parte sin enviar','pendiente'],['Pendiente n.º obra','obra'],['Festivo / descanso','festivo'],['Vacaciones','vacaciones'],['Asuntos propios','asuntos']])this.legend.append(el('span',name,'pc-appointment pc-label-'+kind));
   this.navigator.append(this.legend);
   const calendar=$('calendario');this.monthTitle=el('h2',undefined,'pc-month-title');
-  const scheduler=el('div',undefined,'pc-scheduler');scheduler.append(this.monthTitle,$('calendar'),$('calendar-notes'));
+  const scheduler=el('div',undefined,'pc-scheduler');const dayActions=this.actions(this.button('Abrir día',()=>this.openCalendarDay()),this.button('Nuevo apunte',()=>this.ctx.edit({fecha:this.calendarDay||this.ctx.today()})));scheduler.append(this.monthTitle,dayActions,$('calendar'),$('calendar-notes'));
   calendar.querySelector('h2').remove();calendar.append(this.navigator,scheduler);calendar.classList.add('pc-calendar-layout');
   const statusbar=el('div',undefined,'pc-statusbar');statusbar.append($('sync-info'));$('workspace').append(statusbar);
   menu.addEventListener('toggle',event=>{if(event.target.open)for(const other of menu.querySelectorAll('details'))if(other!==event.target)other.open=false;},true);
@@ -80,11 +81,11 @@ export class DesktopUI{
   if(this.view==='operarios'){area.append(el('h2','Partes de operarios'),this.note('Selecciona el operario en el filtro superior y el mes de trabajo.'));area.append(this.actions(this.button('Ver partes',()=>this.open('partes')),this.button('Abrir día para editar',()=>this.openAdminDay()),this.button('Preparar partes de equipo',()=>this.openTeam())));return;}
   if(this.view==='diagnostico'){area.append(el('h2','Diagnóstico de DT'));const rows=[{Dato:'Protocolo de intercambio',Valor:this.full.contrato},{Dato:'Partes de obra',Valor:this.full.obra.Partes.length},{Dato:'Hojas de necesidades',Valor:this.full.obra.Necesidades.length},{Dato:'Cambios de obra',Valor:this.full.obra.CambiosMaterial.length},{Dato:'Registros de existencias',Valor:this.full.obra.Existencias.length},{Dato:'Cambios pendientes del móvil',Valor:this.ctx.pending().filter(p=>p.state!=='aplicado').length}];return this.table(area,rows,['Dato','Valor']);}
  }
- table(area,rows,columns,onSelect){
+ table(area,rows,columns,onSelect,onActivate){
   const query=this.filter.toLocaleLowerCase('es');const shown=(rows||[]).filter(row=>!query||columns.some(c=>String(row[c]??'').toLocaleLowerCase('es').includes(query)));
   if(!shown.length){area.append(el('p','No hay registros para esta vista o filtro.','empty'));return;}
   const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),hr=el('tr');for(const col of columns){const th=el('th',label(col));th.scope='col';hr.append(th);}head.append(hr);table.append(head);const body=el('tbody');
-  for(const row of shown){const tr=el('tr');if(onSelect){tr.tabIndex=0;tr.setAttribute('aria-selected','false');const select=()=>{for(const r of body.children)r.setAttribute('aria-selected','false');tr.setAttribute('aria-selected','true');onSelect(row);};tr.addEventListener('click',select);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}});}
+  for(const row of shown){const tr=el('tr');if(onSelect){tr.tabIndex=0;tr.setAttribute('aria-selected','false');const select=()=>{for(const r of body.children)r.setAttribute('aria-selected','false');tr.setAttribute('aria-selected','true');onSelect(row);};const activate=()=>{select();try{Promise.resolve(onActivate?.(row)).catch(error=>this.ctx.error(error));}catch(error){this.ctx.error(error);}};tr.addEventListener('click',select);if(onActivate)tr.addEventListener('dblclick',activate);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(e.key==='Enter'&&onActivate)activate();else select();}});}
    for(const col of columns){let value=row[col];if(typeof value==='boolean')value=value?'Sí':'No';if(Array.isArray(value))value=value.length+' línea(s)';const td=el('td',value??'');if(['NumHoras','horas','Unidades','Recibido','Pendiente'].includes(col))td.className='number';tr.append(td);}body.append(tr);
   }table.append(body);wrap.append(table);area.append(wrap);area.append(el('p',shown.length+' registro(s)','muted'));
  }
@@ -92,7 +93,7 @@ export class DesktopUI{
   const area=$('parts-list');area.replaceChildren();const rows=this.visibleParts();const title=$('partes').querySelector('h2');title.textContent=this.day?'Parte diario · '+this.day:'Partes diarios';
   area.append(this.actions(this.button('Nuevo',()=>this.ctx.edit()),this.button('Editar',()=>this.editSelected()),this.button('Eliminar',()=>this.deleteSelected()),this.button('Copiar para hoy',()=>{const p=this.requireSelection();this.ctx.edit({...p,id:undefined,revision:undefined,fecha:this.ctx.today()});}),this.button('Exportar Excel',()=>this.exportDaily(rows)),this.button('Marcar enviados',()=>this.markDaily(rows,true)),this.button('Marcar pendientes',()=>this.markDaily(rows,false))));
   if(this.day)area.append(this.button('Mostrar todo el mes',()=>{this.day='';this.renderContent();}));
-  this.table(area,rows.map(p=>({...p,estado:p.entregado?'Enviado':'Pendiente'})),['fecha','operario','obra','titulo','horas','tipo_hora','km','estado','notas'],row=>this.selected=row);
+  this.table(area,rows.map(p=>({...p,estado:p.entregado?'Enviado':'Pendiente'})),['fecha','operario','obra','titulo','horas','tipo_hora','km','estado','notas'],row=>this.selected=row,()=>this.editSelected());
  }
  requireSelection(){if(!this.selected)throw new Error('Selecciona primero una fila de la lista.');return this.selected;}
  editSelected(){const p=this.requireSelection();if(p.id)this.ctx.edit(p);else this.openAdminDay(p.fecha,p.operario);}
@@ -115,11 +116,12 @@ export class DesktopUI{
     if(parts.some(part=>part.fecha===value))button.classList.add('pc-mini-has-parts');grid.append(button);
   }this.mini.append(grid);
  }
+ openCalendarDay(){this.day=this.calendarDay||this.ctx.today();this.view='partes';this.render();}
  renderCalendar(){
   this.renderMiniCalendar();
   const parts=this.visibleParts();const queued=this.ctx.pending().filter(p=>p.kind!=='Comando'&&p.parte);
   this.ctx.calendar(parts,queued,this.worker);const cells=$('calendar').children;const month=$('month').value,[year,m]=month.split('-').map(Number),offset=(new Date(year,m-1,1).getDay()+6)%7;
-  for(let d=1;d<=new Date(year,m,0).getDate();d++){const cell=cells[7+offset+d-1],value=month+'-'+String(d).padStart(2,'0'),lines=parts.filter(p=>p.fecha===value);if(!cell)continue;cell.tabIndex=0;cell.setAttribute('role','button');cell.setAttribute('aria-label',value+': '+lines.length+' apuntes');if(lines.length)cell.classList.add(lines.every(p=>p.entregado)?'pc-day-sent':'pc-day-pending');const open=()=>{this.day=value;this.view='partes';this.render();};cell.addEventListener('click',open);cell.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});}
+  for(let d=1;d<=new Date(year,m,0).getDate();d++){const cell=cells[7+offset+d-1],value=month+'-'+String(d).padStart(2,'0'),lines=parts.filter(p=>p.fecha===value);if(!cell)continue;cell.tabIndex=0;cell.setAttribute('role','button');cell.setAttribute('aria-label',value+': '+lines.length+' apuntes');cell.setAttribute('aria-pressed',String(this.calendarDay===value));if(lines.length)cell.classList.add(lines.every(p=>p.entregado)?'pc-day-sent':'pc-day-pending');const select=()=>{this.calendarDay=value;for(const other of cells)if(other.hasAttribute('aria-pressed'))other.setAttribute('aria-pressed',String(other===cell));$('calendar-notes').textContent=value+' · '+lines.length+' apuntes. Doble clic o Abrir día para consultar.';};cell.addEventListener('click',select);cell.addEventListener('dblclick',()=>{select();this.openCalendarDay();});cell.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();if(e.key==='Enter')this.openCalendarDay();}});}
  }
  async command(accion,datos){if(!this.full?.acciones.includes(accion))throw new Error('Esta operación requiere actualizar los servicios del escritorio.');const requestId=this.submissionId;this.submissionId=undefined;return this.ctx.command(accion,datos,requestId);}
  documents(area,key,model,title,action){
@@ -131,7 +133,7 @@ export class DesktopUI{
   actions.push(this.button(key==='Necesidades'?'Exportar Word':'Exportar Excel',()=>this.exportDocument(key,selected,false)));
   if(key==='Partes')actions.push(this.button('Exportar PDF',()=>this.exportDocument(key,selected,true)));
   area.append(this.actions(...actions));const columns=key==='Partes'?['NumeroParte','Fecha','NumeroObra','Titulo','Cliente','Operarios','Materiales']:key==='Necesidades'?['Numero','FechaPedido','Obra','TituloObra','Estado','PorcentajeRecibido']:['Numero','Fecha','DescripcionCambio','Anulado','Materiales'];
-  this.table(area,this.full.obra[key],columns,row=>selected=row);
+  this.table(area,this.full.obra[key],columns,row=>selected=row,()=>actions[1].click());
  }
  async exportDocument(key,doc,pdf){
   if(!doc)throw new Error('Selecciona un documento.');const data={tipo:key==='Partes'?'obra':key==='Necesidades'?'necesidad':'cambio',id:doc.Id,version:doc.Version,formato:pdf?'PDF':'Excel'};
@@ -151,7 +153,7 @@ export class DesktopUI{
  catalog(area,name){
   const catalog=this.full.catalogos[name];area.append(el('h2',({obras:'N.º de obras',centros:'Centros de coste',tipos:'Tipos de hora',capitulos:'Capítulos de obra',clientes:'Clientes',jefes:'Jefes de obra',departamentos:'Departamentos'})[name]));let selected;
   const edit=(row)=>this.editFields(catalog.campos,row?.datos||{},data=>this.command('catalogo.guardar',{catalogo:name,clave:row?.datos[catalog.clave]??null,revision:row?.revision||'',fila:data}),{key:catalog.clave,existing:!!row});
-  area.append(this.actions(this.button('Nuevo',()=>edit(null)),this.button('Editar',()=>{if(!selected)throw new Error('Selecciona una fila.');return edit(selected);}),this.button('Eliminar',async()=>{if(!selected)throw new Error('Selecciona una fila.');if(confirm('¿Eliminar el registro seleccionado?'))await this.command('catalogo.eliminar',{catalogo:name,clave:selected.datos[catalog.clave],revision:selected.revision,fila:{}});})));this.table(area,catalog.filas.map(r=>({...r.datos,_row:r})),catalog.campos.map(c=>c.nombre),row=>selected=row._row);
+  area.append(this.actions(this.button('Nuevo',()=>edit(null)),this.button('Editar',()=>{if(!selected)throw new Error('Selecciona una fila.');return edit(selected);}),this.button('Eliminar',async()=>{if(!selected)throw new Error('Selecciona una fila.');if(confirm('¿Eliminar el registro seleccionado?'))await this.command('catalogo.eliminar',{catalogo:name,clave:selected.datos[catalog.clave],revision:selected.revision,fila:{}});})));this.table(area,catalog.filas.map(r=>({...r.datos,_row:r})),catalog.campos.map(c=>c.nombre),row=>selected=row._row,row=>edit(row._row));
  }
  workCatalog(area,key){
   area.append(el('h2','Catálogos de obra'));area.append(this.actions(...['Clientes','Obras','Operarios','Equipos','Plantillas'].map(name=>this.button(name,()=>this.open('obra-catalogo:'+name)))));
@@ -176,11 +178,18 @@ export class DesktopUI{
   if(!item){if(typeof value.Id==='string')value.Id=crypto.randomUUID().replace(/-/g,'');for(const name of Object.keys(value)){if(name.startsWith('Fecha')&&value[name])value[name]=name==='FechaPedido'?this.ctx.today()+' '+new Date().toTimeString().slice(0,5):this.ctx.today();}if('Anio' in value)value.Anio=Number($('month').value.slice(0,4));}
   let fields=schema.campos.filter(c=>!autoFields.has(c.nombre)&&!['Archivo','Pdf'].includes(c.nombre));
   if(['HojaNecesidades','CambioMaterialObra'].includes(model))fields=fields.filter(c=>c.nombre!=='Numero');
-  this.editFields(fields,value,save,{...options,title:options.title||label(model),model});
+  this.editFields(fields,value,save,{...options,title:options.title||({DocumentoObra:'Datos del parte de obra',HojaNecesidades:'Hoja de necesidades',CambioMaterialObra:'Cambio de material entre obras'})[model]||label(model),model});
  }
  editFields(fields,source,save,options={}){
   const dialog=this.modelDialog;dialog.replaceChildren();const form=el('form'),title=el('h2',options.title||'Datos del registro'),error=el('p',undefined,'error');error.setAttribute('role','alert');form.append(title);
-  const read=this.fieldset(form,fields,clone(source),options);
+  let read;
+  if(['DocumentoObra','HojaNecesidades','CambioMaterialObra'].includes(options.model)){
+   const header=el('fieldset',undefined,'pc-document-header');header.append(el('legend',options.model==='DocumentoObra'?'Datos del parte de obra':'Datos del documento'));form.append(header);
+   const scalar=fields.filter(field=>field.tipo!=='lista'),lines=fields.filter(field=>field.tipo==='lista');
+   const order=['ClienteId','ObraId','NumeroObra','Obra','Fecha','FechaPedido','PlantillaId','Titulo','TituloObra','NumeroPedido','OT','JefeObra','Capitulo','Subcapitulo','TrabajoEspecifico','Punto1','Punto2','Punto3','Punto4','Punto5','Punto6'];
+   const sorted=[...scalar].sort((a,b)=>(order.includes(a.nombre)?order.indexOf(a.nombre):100)-(order.includes(b.nombre)?order.indexOf(b.nombre):100));
+   const readHeader=this.fieldset(header,sorted,clone(source),options),readLines=this.fieldset(form,lines,clone(source),options);read=()=>{const result=readHeader(),lineValues=readLines();for(const spec of lines)result[spec.nombre]=lineValues[spec.nombre];return result;};
+  }else read=this.fieldset(form,fields,clone(source),options);
   const cancel=this.button('Cancelar',()=>dialog.close()),submit=el('button','Guardar','primary');submit.type='submit';form.append(error,this.actions(cancel,submit));
   form.addEventListener('submit',async event=>{event.preventDefault();submit.disabled=true;error.textContent='';try{const value=read();this.submissionId=form.dataset.requestId||(form.dataset.requestId=crypto.randomUUID());await save(value);this.submissionId=undefined;dialog.close();this.open('sincronizacion');}catch(e){error.textContent=e.message;const previous=this.ctx.pending().find(item=>item.id===form.dataset.requestId);if(previous&&['rechazado','conflicto'].includes(previous.state))delete form.dataset.requestId;}finally{this.submissionId=undefined;submit.disabled=false;}});dialog.append(form);dialog.showModal();form.querySelector('input,select,textarea,button')?.focus();
  }
@@ -188,6 +197,11 @@ export class DesktopUI{
   const readers=[];
   for(const spec of fields){
    const name=spec.nombre,kind=spec.tipo,current=value[name];
+   if(name==='N'&&options.model==='ParteApunte'){
+    const box=el('fieldset',undefined,'pc-levels'),grid=el('div',undefined,'pc-level-grid'),inputs=[];box.append(el('legend','Puntos · N1 a N8'),grid);container.append(box);
+    for(let i=0;i<8;i++){const field=el('label','N'+(i+1)),input=el('input');input.value=value.NNulo?.[i]?'':current?.[i]??'';input.maxLength=4;field.append(input);grid.append(field);inputs.push(input);}
+    const choose=()=>{const work=container.querySelector('[data-field=NumObra]')?.value,kind=pointCatalog(work);this.pickers.choose(kind,row=>{const next=mergePoints(inputs.map(i=>i.value),row,kind);inputs.forEach((input,i)=>input.value=next[i]);});};inputs.forEach(input=>input.addEventListener('dblclick',choose));box.append(this.button('Seleccionar puntos',choose));readers.push(target=>{target.N=inputs.map(i=>i.value.trim());target.NNulo=target.N.map(i=>!i);});continue;
+   }
    if(kind==='lista'){
     const box=el('fieldset',undefined,'pc-lines'),legend=el('legend',label(name));box.append(legend);container.append(box);
     if(spec.elemento==='Int32'){
@@ -202,7 +216,7 @@ export class DesktopUI{
    const field=el('label',name==='Contrasena'?'Contraseña':label(name));let input;
    const reference=({ClienteId:'Clientes',ObraId:'Obras',OperarioId:'Operarios',PlantillaId:'Plantillas'})[name];
    const choices=name==='Tipo'&&options.model==='DiaLaboral'?['Laborable','Festivo nacional','Festivo autonómico','Festivo local','Descanso por ajuste']:name==='Tipo'&&options.model==='AusenciaLaboral'?['Vacaciones','Asuntos propios']:null;
-   if(choices||name==='TipoHora'){
+   if(choices){
     input=el('select');const values=choices||this.state.tipos_hora.map(row=>row.TipoHora);for(const entry of values){const option=el('option',choices?entry:entry+' · '+(this.state.tipos_hora.find(row=>row.TipoHora===entry)?.DescripcionHoras||''));option.value=entry;input.append(option);}if(current&&!values.includes(current)){const historic=el('option',current+' · registro histórico');historic.value=current;input.append(historic);}input.value=current||values[0]||'';
    }else if(name==='Operario'&&this.full.operarios){
     input=el('select');for(const worker of this.full.operarios){const option=el('option',worker.Numero+' · '+(worker.Nombre||''));option.value=worker.Numero;input.append(option);}input.value=String(current||this.worker||this.ctx.profile().operario);
@@ -223,7 +237,7 @@ export class DesktopUI{
    input.dataset.field=name;
    if(spec.longitud>0)input.maxLength=spec.longitud;
    if(spec.automatico||spec.solo_lectura)input.disabled=true;
-   field.append(input);container.append(field);
+   field.append(input);container.append(field);this.pickers.fields(input,name,container);
    readers.push(target=>{
     if(input.disabled)return;
     if(kind==='Boolean'){target[name]=input.checked;return;}

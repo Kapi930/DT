@@ -79,18 +79,14 @@ function today(){const date=new Date();return `${date.getFullYear()}-${String(da
 function openEditor(part){
  if(part?.id&&pending.some(p=>p.id_parte===part.id&&!['rechazado','conflicto','aplicado'].includes(p.state)))throw new Error('Este parte tiene un cambio pendiente. Espera su confirmación antes de editarlo.');
  const form=$('part-form');form.reset();delete form.dataset.requestId;delete form.dataset.partId;delete form.dataset.revision;
- form.elements.fecha.value=part?.fecha||today();form.elements.tipo_hora.replaceChildren();
- for(const type of snapshot.tipos_hora){const option=node('option',type.TipoHora+' · '+type.DescripcionHoras);option.value=type.TipoHora;form.elements.tipo_hora.append(option);}
- form.elements.obra.replaceChildren(new Option('Pendiente de número',''));
- for(const work of snapshot.obras)form.elements.obra.append(new Option(work.NumObra+' · '+(work.DescripcionObra||''),work.NumObra));
+ form.elements.fecha.value=part?.fecha||today();form.elements.tipo_hora.value=snapshot.tipos_hora.some(row=>row.TipoHora==='11')?'11':snapshot.tipos_hora[0]?.TipoHora||'';
  if(part){
-  if(part.obra&&!snapshot.obras.some(w=>w.NumObra===part.obra))form.elements.obra.append(new Option(part.obra+' · registro histórico',part.obra));
-  if(part.tipo_hora&&!snapshot.tipos_hora.some(t=>t.TipoHora===part.tipo_hora))form.elements.tipo_hora.append(new Option(part.tipo_hora+' · tipo histórico',part.tipo_hora));
-  for(const name of ['horas','tipo_hora','obra','titulo','notas','km','notas_departamento'])if(form.elements[name])form.elements[name].value=part[name]??'';
+  for(const name of ['horas','tipo_hora','obra','titulo','notas','km','notas_departamento'])if(form.elements[name]&&part[name]!==undefined)form.elements[name].value=part[name]??'';
   if(form.elements.otro_departamento)form.elements.otro_departamento.checked=!!part.otro_departamento;
   for(let n=1;n<=8;n++)if(form.elements['nivel_'+n])form.elements['nivel_'+n].value=part.niveles?.[n-1]??'';
   if(part.id){form.dataset.partId=part.id;form.dataset.revision=part.revision;}
  }
+ if(form.elements.pending_work)form.elements.pending_work.checked=!form.elements.obra.value;
  form.querySelector('h2').textContent=part?.id?'Editar parte de trabajo':'Nuevo parte de trabajo';$('form-error').textContent='';$('editor').showModal();form.elements.fecha.focus();
 }
 $('login-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,password=form.elements.password.value,user=Number(form.elements.user.value),button=form.querySelector('button');button.disabled=true;try{if(pairing){if(user!==pairing.user||!await passwordOK(password))throw new Error('Usuario o contraseña incorrectos.');profile={operario:user,nombre:snapshot.account.name};}else{const result=await api('sesion','POST',{usuario:user,contrasena:password});session=result.token;profile=result;await localData();}form.elements.password.value='';loggedIn();}catch(error){showError(error);}finally{button.disabled=false;}});
