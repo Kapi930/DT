@@ -1,0 +1,25 @@
+{
+  "id": "/DT/",
+  "name": "DT · Partes y calendario",
+  "short_name": "DT",
+  "lang": "es",
+  "start_url": "/DT/index.html",
+  "scope": "/DT/",
+  "display": "standalone",
+  "background_color": "#585858",
+  "theme_color": "#4e4e4e",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
