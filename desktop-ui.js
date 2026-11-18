@@ -1,6 +1,6 @@
 // Interfaz de DT: mismos grupos de trabajo que el escritorio, con controles táctiles.
-import {CatalogPicker,mergePoints,pointCatalog} from './selectors.js?v=fluidez-6';
-import {appendRows} from './responsive.js?v=fluidez-6';
+import {CatalogPicker,mergePoints,pointCatalog} from './selectors.js?v=fluidez-7';
+import {appendRows} from './responsive.js?v=fluidez-7';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
 const $=id=>document.getElementById(id);
 const clone=value=>JSON.parse(JSON.stringify(value));

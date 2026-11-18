@@ -1,5 +1,5 @@
 // Reglas del escritorio: xfrmParteDatos.SeleccionarCapitulo/CentroCoste/TipoHora.
-import {appendRows} from './responsive.js?v=fluidez-6';
+import {appendRows} from './responsive.js?v=fluidez-7';
 export const pointCatalog=work=>String(work||'').includes('A')?'centros':'capitulos';
 export function pointValues(row,kind,count=8){
  return Array.from({length:count},(_,i)=>kind==='centros'?(i===0?row.CentroCoste:i===1?row.SubCentro:undefined):row['N'+(i+1)]);

@@ -1,7 +1,7 @@
 // DT conserva solo sus recursos. CALWEB comparte origen, nunca sus cachés.
-const CACHE = 'dt-independiente-6';
+const CACHE = 'dt-independiente-7';
 const BASE = new URL('./', self.location.href);
-const FILES = ['./','index.html','app.js','style.css','desktop-ui.js','selectors.js','responsive.js','desktop.css','app.js?v=fluidez-6','desktop-ui.js?v=fluidez-6','selectors.js?v=fluidez-6','responsive.js?v=fluidez-6','desktop.css?v=dropbox-4','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-independiente-4','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
+const FILES = ['./','index.html','app.js','style.css','desktop-ui.js','selectors.js','responsive.js','desktop.css','app.js?v=fluidez-7','desktop-ui.js?v=fluidez-7','selectors.js?v=fluidez-7','responsive.js?v=fluidez-7','desktop.css?v=dropbox-4','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-independiente-4','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
 const PATHS = new Set(FILES.map(file => new URL(file, BASE).pathname));
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -14,6 +14,12 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || url.origin !== BASE.origin || !PATHS.has(url.pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
+    // El servicio se actualiza al abrir DT. Su pantalla inicial ya instalada
+    // puede aparecer inmediatamente, incluso con Internet lento o sin señal.
+    if(event.request.mode === 'navigate' && (url.pathname === BASE.pathname || url.pathname === new URL('index.html',BASE).pathname)){
+      const page=await cache.match(new URL('index.html',BASE).href);
+      if(page)return page;
+    }
     // Los recursos pertenecen a esta versión del servicio. Abrir la app no
     // necesita esperar a Internet para cada módulo, hoja de estilo o imagen.
     if(event.request.mode !== 'navigate' && url.pathname !== BASE.pathname && !url.pathname.endsWith('.html')){
