@@ -46,15 +46,30 @@ async function synchronize(){
    }acceptAck(item,ack);}
    await localData();
   }else{
-   for(const item of pending){
-    if(['aplicado','rechazado','conflicto'].includes(item.state))continue;
+   // Los archivos de cola son inmutables y el PC no los retira: un envío
+   // confirmado por Dropbox solo necesita consultar su recibo.
+   await token();
+   const outgoing=pending.filter(item=>!['aplicado','rechazado','conflicto'].includes(item.state));
+   for(const item of outgoing){
+    if(item.state==='enviado')continue;
     let operation={id:item.id,device,user:pairing.user,accion:item.kind==='Comando'?'Comando':item.accion||'Crear'};
     if(item.kind==='Comando')operation.comando=item.comando;
     else{operation.parte=item.parte;if(operation.accion!=='Crear'){operation.id_parte=item.id_parte;operation.revision=item.revision;}}
     await upload(`usuarios/${pairing.user}/cola/${device}/${item.id}.json`,await seal(operation,'operacion'));
     item.state='enviado';await saveCache();
-    const envelope=await download(`usuarios/${pairing.user}/confirmaciones/${device}/${item.id}.json`,true);
-    if(envelope){const ack=await open(envelope,'confirmacion');if(ack.id!==item.id||ack.device!==device||ack.user!==pairing.user)throw new Error('La confirmación no corresponde al envío.');acceptAck(item,ack);await saveCache();}
+   }
+   // Consultas independientes, con un límite pequeño para redes móviles.
+   // Esperar a todo el lote impide que una respuesta tardía modifique la cola
+   // después de guardar o de finalizar la sincronización.
+   for(let i=0;i<outgoing.length;i+=3){
+    const batch=await Promise.allSettled(outgoing.slice(i,i+3).map(async item=>{
+     const envelope=await download(`usuarios/${pairing.user}/confirmaciones/${device}/${item.id}.json`,true);
+     if(!envelope)return false;
+     const ack=await open(envelope,'confirmacion');if(ack.id!==item.id||ack.device!==device||ack.user!==pairing.user)throw new Error('La confirmación no corresponde al envío.');
+     acceptAck(item,ack);return true;
+    }));
+    if(batch.some(result=>result.status==='fulfilled'&&result.value))await saveCache();
+    const failure=batch.find(result=>result.status==='rejected');if(failure)throw failure.reason;
    }
    const envelope=await download(`usuarios/${pairing.user}/base.json`,true);
    if(!envelope)throw new Error('El escritorio aún no ha preparado tus datos. Sincroniza desde DT y vuelve a intentarlo.');
@@ -154,9 +169,9 @@ async function loadLocalQueue(){
  const localKey=await getLocalQueueKey();const raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:un64(cache.nonce),additionalData:enc.encode('DT-local-'+profile.operario)},localKey,un64(cache.data));pending=JSON.parse(dec.decode(raw));
 }
 async function installDesktopUI(){
- const {DesktopUI}=await import('./desktop-ui.js?v=dropbox-4');
+ const {DesktopUI}=await import('./desktop-ui.js?v=fluidez-6');
  desktopUI=new DesktopUI({state:()=>snapshot,profile:()=>profile,pending:()=>pending,cloud:()=>!!pairing,today,error:showError,sync:synchronize,command:enqueueCommand,discard,edit:openEditor,remove:removePart,calendar:renderCalendar,balances:renderBalances});
- setInterval(()=>{if(profile&&!busy&&(snapshot?.sincronizacion_diarios?.pendientes>0||pending.some(p=>!['aplicado','rechazado','conflicto'].includes(p.state)||(p.state==='aplicado'&&p.kind==='Comando'&&!p.resultado?.base64&&!p.resultado?.HuellaInicial&&!p.resultado?.Dias&&!p.resultado?.calendario&&(snapshot?.completo?.fecha||0)<(p.appliedAt||0)))))synchronize();},5000);
+ setInterval(()=>{if(profile&&navigator.onLine&&document.visibilityState!=='hidden'&&!busy&&(snapshot?.sincronizacion_diarios?.pendientes>0||pending.some(p=>!['aplicado','rechazado','conflicto'].includes(p.state)||(p.state==='aplicado'&&p.kind==='Comando'&&!p.resultado?.base64&&!p.resultado?.HuellaInicial&&!p.resultado?.Dias&&!p.resultado?.calendario&&(snapshot?.completo?.fecha||0)<(p.appliedAt||0)))))synchronize();},5000);
 }
 // DT registra solo su propio servicio, incluso si falla el primer acceso.
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});

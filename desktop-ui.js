@@ -1,5 +1,6 @@
 // Interfaz de DT: mismos grupos de trabajo que el escritorio, con controles táctiles.
-import {CatalogPicker,mergePoints,pointCatalog} from './selectors.js?v=dropbox-4';
+import {CatalogPicker,mergePoints,pointCatalog} from './selectors.js?v=fluidez-6';
+import {appendRows} from './responsive.js?v=fluidez-6';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
 const $=id=>document.getElementById(id);
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -85,9 +86,9 @@ export class DesktopUI{
   const query=this.filter.toLocaleLowerCase('es');const shown=(rows||[]).filter(row=>!query||columns.some(c=>String(row[c]??'').toLocaleLowerCase('es').includes(query)));
   if(!shown.length){area.append(el('p','No hay registros para esta vista o filtro.','empty'));return;}
   const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),hr=el('tr');for(const col of columns){const th=el('th',label(col));th.scope='col';hr.append(th);}head.append(hr);table.append(head);const body=el('tbody');
-  for(const row of shown){const tr=el('tr');if(onSelect){tr.tabIndex=0;tr.setAttribute('aria-selected','false');const select=()=>{for(const r of body.children)r.setAttribute('aria-selected','false');tr.setAttribute('aria-selected','true');onSelect(row);};const activate=()=>{select();try{Promise.resolve(onActivate?.(row)).catch(error=>this.ctx.error(error));}catch(error){this.ctx.error(error);}};tr.addEventListener('click',select);if(onActivate)tr.addEventListener('dblclick',activate);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(e.key==='Enter'&&onActivate)activate();else select();}});}
-   for(const col of columns){let value=row[col];if(typeof value==='boolean')value=value?'Sí':'No';if(Array.isArray(value))value=value.length+' línea(s)';const td=el('td',value??'');if(['NumHoras','horas','Unidades','Recibido','Pendiente'].includes(col))td.className='number';tr.append(td);}body.append(tr);
-  }table.append(body);wrap.append(table);area.append(wrap);area.append(el('p',shown.length+' registro(s)','muted'));
+  appendRows(body,shown,row=>{const tr=el('tr');if(onSelect){tr.tabIndex=0;tr.setAttribute('aria-selected','false');const select=()=>{for(const r of body.children)r.setAttribute('aria-selected','false');tr.setAttribute('aria-selected','true');onSelect(row);};const activate=()=>{select();try{Promise.resolve(onActivate?.(row)).catch(error=>this.ctx.error(error));}catch(error){this.ctx.error(error);}};tr.addEventListener('click',select);if(onActivate)tr.addEventListener('dblclick',activate);tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(e.key==='Enter'&&onActivate)activate();else select();}});}
+   for(const col of columns){let value=row[col];if(typeof value==='boolean')value=value?'Sí':'No';if(Array.isArray(value))value=value.length+' línea(s)';const td=el('td',value??'');if(['NumHoras','horas','Unidades','Recibido','Pendiente'].includes(col))td.className='number';tr.append(td);}return tr;
+  });table.append(body);wrap.append(table);area.append(wrap);area.append(el('p',shown.length+' registro(s)','muted'));
  }
  renderParts(){
   const area=$('parts-list');area.replaceChildren();const rows=this.visibleParts();const title=$('partes').querySelector('h2');title.textContent=this.day?'Parte diario · '+this.day:'Partes diarios';

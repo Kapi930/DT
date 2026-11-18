@@ -1,4 +1,5 @@
 // Reglas del escritorio: xfrmParteDatos.SeleccionarCapitulo/CentroCoste/TipoHora.
+import {appendRows} from './responsive.js?v=fluidez-6';
 export const pointCatalog=work=>String(work||'').includes('A')?'centros':'capitulos';
 export function pointValues(row,kind,count=8){
  return Array.from({length:count},(_,i)=>kind==='centros'?(i===0?row.CentroCoste:i===1?row.SubCentro:undefined):row['N'+(i+1)]);
@@ -31,12 +32,13 @@ export class CatalogPicker{
   const cancel=make('button','Cancelar'),accept=make('button','Seleccionar','primary');cancel.type=accept.type='button';accept.disabled=true;cancel.addEventListener('click',()=>dialog.close());
   const apply=()=>{if(!selected)return;onChoose(selected);dialog.close();};accept.addEventListener('click',apply);actions.append(cancel,accept);dialog.append(heading,label,area,status,actions);
   const rows=catalogData(this.state(),name);
-  const render=()=>{area.replaceChildren();selected=undefined;accept.disabled=true;const query=search.value.trim().toLocaleLowerCase('es');const shown=rows.filter(row=>columns.some(key=>String(row[key]??'').toLocaleLowerCase('es').includes(query)));
+  const searchIndex=rows.map(row=>columns.map(key=>String(row[key]??'').toLocaleLowerCase('es')));
+  const render=()=>{area.replaceChildren();selected=undefined;accept.disabled=true;const query=search.value.trim().toLocaleLowerCase('es');const shown=rows.filter((row,index)=>!query||searchIndex[index].some(value=>value.includes(query)));
    status.textContent=shown.length?shown.length+' registros. Selecciona una fila y pulsa Seleccionar, o haz doble clic.':rows.length?'No hay coincidencias. Cambia la búsqueda.':'Este catálogo todavía no contiene registros. Sincroniza con el PC y vuelve a intentarlo.';
    if(!shown.length)return;const table=make('table'),head=make('thead'),hr=make('tr'),body=make('tbody');for(const key of columns){const th=make('th',({Descripcion:'Descripción',DescripcionObra:'Título de obra',TipoHora:'Tipo',DescripcionHoras:'Descripción',NumObra:'N.º obra',CentroCoste:'Centro',SubCentro:'Subcentro',LugarTrabajo:'Lugar de trabajo'})[key]||key);th.scope='col';hr.append(th);}head.append(hr);table.append(head,body);
-   for(const row of shown){const tr=make('tr');tr.setAttribute('aria-selected','false');const select=()=>{selected=row;accept.disabled=false;for(const other of body.children)other.setAttribute('aria-selected',String(other===tr));};
-    for(const [i,key]of columns.entries()){const td=make('td');if(i===0){const button=make('button',String(row[key]??'—'),'pc-picker-code');button.type='button';button.setAttribute('aria-label',columns.map(c=>row[c]).filter(v=>v!==null&&v!==undefined&&v!=='').join(' · '));button.addEventListener('click',select);button.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();select();apply();}});td.append(button);}else td.textContent=String(row[key]??'');tr.append(td);}tr.addEventListener('click',select);tr.addEventListener('dblclick',()=>{select();apply();});body.append(tr);
-   }area.append(table);
+   appendRows(body,shown,row=>{const tr=make('tr');tr.setAttribute('aria-selected','false');const select=()=>{selected=row;accept.disabled=false;for(const other of body.children)other.setAttribute('aria-selected',String(other===tr));};
+    for(const [i,key]of columns.entries()){const td=make('td');if(i===0){const button=make('button',String(row[key]??'—'),'pc-picker-code');button.type='button';button.setAttribute('aria-label',columns.map(c=>row[c]).filter(v=>v!==null&&v!==undefined&&v!=='').join(' · '));button.addEventListener('click',select);button.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();select();apply();}});td.append(button);}else td.textContent=String(row[key]??'');tr.append(td);}tr.addEventListener('click',select);tr.addEventListener('dblclick',()=>{select();apply();});return tr;
+   });area.append(table);
   };search.addEventListener('input',render);render();dialog.showModal();search.focus();
  }
  daily(form){
