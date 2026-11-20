@@ -1,7 +1,7 @@
 // DT conserva solo sus recursos. CALWEB comparte origen, nunca sus cachés.
-const CACHE = 'dt-evolucion-2';
+const CACHE = 'dt-evolucion-3';
 const BASE = new URL('./', self.location.href);
-const FILES = ['demo-data.json','favicon.ico','app-icon.png','apple-touch-icon.png','sqlite-pc.css','sqlite-pc.css?v=evolucion-1','./','index.html','app.js','style.css','desktop-ui.js','selectors.js','responsive.js','desktop.css','app.js?v=evolucion-2','desktop-ui.js?v=evolucion-1','selectors.js?v=evolucion-1','responsive.js?v=evolucion-1','desktop.css?v=evolucion-1','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-evolucion-2','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
+const FILES = ['demo-data.json','favicon.ico','app-icon.png','apple-touch-icon.png','sqlite-pc.css','sqlite-pc.css?v=evolucion-3','./','index.html','app.js','style.css','desktop-ui.js','selectors.js','responsive.js','desktop.css','app.js?v=evolucion-2','desktop-ui.js?v=evolucion-1','selectors.js?v=evolucion-1','responsive.js?v=evolucion-1','desktop.css?v=evolucion-1','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest','manifest.webmanifest?v=dt-evolucion-3','assets/calendario.png','assets/partes_operarios.png','assets/usuarios.png','assets/necesidades.png','assets/cambios_obra.png','assets/diagnostico.png'];
 const PATHS = new Set(FILES.map(file => new URL(file, BASE).pathname));
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));

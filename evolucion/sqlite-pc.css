@@ -57,3 +57,10 @@ button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px 
  footer{padding:12px;font-size:11px}
 }
 @media(min-width:621px) and (max-width:900px){.pc-workspace .pc-calendar-layout{grid-template-columns:170px minmax(0,1fr)}}
+
+/* Centrado uniforme también cuando una celda ocupa varias líneas. */
+.pc-workspace th,.pc-workspace td,.pc-editor th,.pc-editor td,.pc-picker th,.pc-picker td{vertical-align:middle;text-align:center}
+.pc-picker .pc-picker-code{display:flex;align-items:center;justify-content:center;text-align:center}
+.pc-scheduler .calendar .weekday{display:flex;align-items:center;justify-content:center}
+.pc-scheduler .calendar .pc-appointment,.pc-calendar-legend .pc-appointment{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.4;min-height:calc(2.8em + 8px)}
+.pc-day-detail li{align-items:center;text-align:center}
