@@ -211,12 +211,12 @@ async function initializeDemo(){
  snapshot.vacaciones[0].anio=year;snapshot.completo.laboral.Calendarios[0].Anio=year;snapshot.fecha=Date.now()/1000;
  profile={operario:1,nombre:'Operario de ejemplo'};pending=[];
  const notice='Demostración · datos ficticios. Los cambios de esta prueba se pierden al recargar.';
- synchronize=async()=>status(notice);
+ synchronize=async()=>{render();status(notice);};
  enqueueCommand=async()=>{throw new Error('Esta es una prueba visual. Conecta DT Evolución con Dropbox para guardar documentos y utilizar datos reales.');};
  removePart=async part=>{snapshot.partes=snapshot.partes.filter(p=>p.id!==part.id);render();status(notice);};
  $('month').value=month;await installDesktopUI();loggedIn();status(notice);
  $('identity').textContent='DT Evolución · Demostración';$('logout').textContent='Salir de la prueba';$('connection-settings').textContent='Conectar mis datos';
- document.addEventListener('click',event=>{if(event.target.closest('#logout,#connection-settings')){event.preventDefault();event.stopImmediatePropagation();location.href='./index.html';}},true);
+ document.addEventListener('click',event=>{if(event.target.closest('#sync')){event.preventDefault();event.stopImmediatePropagation();synchronize();return;}if(event.target.closest('#logout,#connection-settings')){event.preventDefault();event.stopImmediatePropagation();location.href='./index.html';}},true);
  document.addEventListener('submit',event=>{
   event.preventDefault();event.stopImmediatePropagation();if(event.target.id!=='part-form'){status('Prueba visual: este formulario no modifica datos reales.');return;}
   const form=event.target,values=new FormData(form),hours=String(values.get('horas')||'').replace(',','.');
